@@ -1,28 +1,19 @@
+import os
+import datetime
 import requests
 import zipfile
 import pandas as pd
-from io import BytesIO
-import boto3
-import pyarrow.parquet as pq
 import pyarrow as pa
+import pyarrow.parquet as pq
 import s3fs
-import datetime
+from io import BytesIO
 
-# Configurar as credenciais AWS
-aws_access_key_id = ''
-aws_secret_access_key = ''
-aws_session_token = ''
 
-# Configurar o cliente S3
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-    aws_session_token=aws_session_token
-)
-
-bucket_name = 'tech-fiap-bucket-s3'
-s3_path = 'dados-b3/scrap-dados/'
+aws_access_key_id=''
+aws_secret_access_key=''
+aws_session_token=''
+bucket_name = 'tech-fiap-fase2-s3'
+s3_path = 'raw-b3/scrap-dados/'
 
 # Função para encontrar o último dia útil
 def ultimo_dia_util(data):
@@ -63,10 +54,18 @@ with zipfile.ZipFile(zip_content, 'r') as zip_ref:
         df_chunks = pd.read_csv(txt_file, delimiter=';', encoding='utf-8', chunksize=chunk_size)
         print("Arquivo .txt carregado em chunks.")
         
+        # Configurar o sistema de arquivos S3 com credenciais
+        s3_fs = s3fs.S3FileSystem(
+            key=aws_access_key_id,
+            secret=aws_secret_access_key,
+            token=aws_session_token
+        )
+        
         # Processar cada chunk
-        for pregao in df_chunks:
+        for i, pregao in enumerate(df_chunks):
             # Tratar os tipos de dados das colunas
-            pregao['DataReferencia'] = pd.to_datetime(pregao['DataReferencia'])
+            #pregao['DataReferencia'] = pd.to_datetime(pregao['DataReferencia'])
+
             pregao['CodigoInstrumento'] = pregao['CodigoInstrumento'].astype(str)
             pregao['AcaoAtualizacao'] = pregao['AcaoAtualizacao'].fillna(0).astype(int)
 
@@ -77,24 +76,26 @@ with zipfile.ZipFile(zip_content, 'r') as zip_ref:
             pregao['HoraFechamento'] = pregao['HoraFechamento'].fillna(0).astype(int)
             pregao['CodigoIdentificadorNegocio'] = pregao['CodigoIdentificadorNegocio'].fillna(0).astype(int)
             pregao['TipoSessaoPregao'] = pregao['TipoSessaoPregao'].fillna(0).astype(int)
-            pregao['DataNegocio'] = pd.to_datetime(pregao['DataNegocio'])
+            #pregao['DataNegocio'] = pd.to_datetime(pregao['DataNegocio'])
             pregao['CodigoParticipanteComprador'] = pregao['CodigoParticipanteComprador'].fillna(0).astype(int)
             pregao['CodigoParticipanteVendedor'] = pregao['CodigoParticipanteVendedor'].fillna(0).astype(int)
+
             # Converter o DataFrame para um Table do PyArrow
             table = pa.Table.from_pandas(pregao)
+
             
             # Gerar a partição diária
-            data_atual = datetime.date.today().strftime('%Y-%m-%d')
-            parquet_path = f'{s3_path}data={data_atual}/pregao.parquet'
+            data_atual_str = datetime.date.today().strftime('%Y-%m-%d')
+            parquet_s3_path = f'{s3_path}data_atual={data_atual_str}/pregao_chunk_{i}.parquet'
             
-            # Configurar o sistema de arquivos S3 com credenciais
-            s3_fs = s3fs.S3FileSystem(
-                key=aws_access_key_id,
-                secret=aws_secret_access_key,
-                token=aws_session_token
-            )
+            # Gravar o Parquet diretamente no S3 em memória usando BytesIO
+            print(f"Salvando chunk diretamente no S3 em {parquet_s3_path}...")
+            with BytesIO() as parquet_buffer:
+                pq.write_table(table, parquet_buffer, compression='snappy')
+                parquet_buffer.seek(0)  # Voltar ao início do buffer
+                
+                # Fazer o upload do buffer Parquet diretamente para o S3
+                with s3_fs.open(f's3://{bucket_name}/{parquet_s3_path}', 'wb') as s3_file:
+                    s3_file.write(parquet_buffer.read())
             
-            # Salvar o DataFrame em formato Parquet no S3
-            print(f"Salvando chunk no S3 em {parquet_path}...")
-            pq.write_to_dataset(table, root_path=f's3://{bucket_name}/{parquet_path}', filesystem=s3_fs)
-            print("Chunk salvo com sucesso.")
+            print(f"Upload do chunk {i} concluído com sucesso.")
