@@ -1,6 +1,6 @@
 # Fase 2 - Big Data Architecture
 
-Este projeto foi desenvolvido como parte do Tech Challenge fase 2 para construir um pipeline de dados completo para extrair, processar e analisar dados do pregão D-1 da B3, utilizando AWS S3, Glue, Lambda e Athena.
+Este projeto foi desenvolvido como parte do Tech Challenge fase 2 outorgada pela FIAP para construir um pipeline de dados completo para extrair, processar e analisar dados do pregão D-1 da B3, utilizando AWS S3, Glue, Lambda e Athena.
 
 # Integrantes do Grupo 
 
