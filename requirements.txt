@@ -27,6 +27,7 @@ nbclient==0.10.0
 nbconvert==7.16.4
 nbformat==5.10.4
 packaging==24.1
+pandas
 pandocfilters==1.5.1
 parso==0.8.4
 pexpect==4.9.0
@@ -39,6 +40,7 @@ pure_eval==0.2.3
 Pygments==2.18.0
 python-dateutil==2.9.0.post0
 pyzmq==26.2.0
+pyarrow
 referencing==0.35.1
 requests==2.32.3
 rpds-py==0.20.0

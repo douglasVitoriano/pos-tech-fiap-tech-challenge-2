@@ -64,7 +64,7 @@ with zipfile.ZipFile(zip_content, 'r') as zip_ref:
         # Processar cada chunk
         for i, pregao in enumerate(df_chunks):
             # Tratar os tipos de dados das colunas
-            #pregao['DataReferencia'] = pd.to_datetime(pregao['DataReferencia'])
+            pregao['DataReferencia'] = pd.to_datetime(pregao['DataReferencia']).astype('datetime64[ms]')
 
             pregao['CodigoInstrumento'] = pregao['CodigoInstrumento'].astype(str)
             pregao['AcaoAtualizacao'] = pregao['AcaoAtualizacao'].fillna(0).astype(int)
@@ -76,7 +76,7 @@ with zipfile.ZipFile(zip_content, 'r') as zip_ref:
             pregao['HoraFechamento'] = pregao['HoraFechamento'].fillna(0).astype(int)
             pregao['CodigoIdentificadorNegocio'] = pregao['CodigoIdentificadorNegocio'].fillna(0).astype(int)
             pregao['TipoSessaoPregao'] = pregao['TipoSessaoPregao'].fillna(0).astype(int)
-            #pregao['DataNegocio'] = pd.to_datetime(pregao['DataNegocio'])
+            pregao['DataNegocio'] = pd.to_datetime(pregao['DataNegocio']).astype('datetime64[ms]')
             pregao['CodigoParticipanteComprador'] = pregao['CodigoParticipanteComprador'].fillna(0).astype(int)
             pregao['CodigoParticipanteVendedor'] = pregao['CodigoParticipanteVendedor'].fillna(0).astype(int)
 
@@ -86,7 +86,7 @@ with zipfile.ZipFile(zip_content, 'r') as zip_ref:
             
             # Gerar a partição diária
             data_atual_str = datetime.date.today().strftime('%Y-%m-%d')
-            parquet_s3_path = f'{s3_path}data_atual={data_atual_str}/pregao_chunk_{i}.parquet'
+            parquet_s3_path = f'{s3_path}data_atual={data_atual_str}/bovespa.parquet'
             
             # Gravar o Parquet diretamente no S3 em memória usando BytesIO
             print(f"Salvando chunk diretamente no S3 em {parquet_s3_path}...")
